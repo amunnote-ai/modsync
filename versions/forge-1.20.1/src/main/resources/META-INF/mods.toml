@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="modsync"
+version="${mod_version}"
+displayName="ModSync"
+description='''
+进入服务器前自动比对服务端 mod：下载缺少的、移走版本错误或被禁止的，退出游戏后自动应用。
+Syncs client mods with the server before joining.
+'''
+# 客户端/服务端是否安装、版本是否一致都不影响进服（否则旧版本的客户端无法进服完成自我更新）
+displayTest="IGNORE_ALL_VERSION"
+
+[[dependencies.modsync]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.modsync]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1,1.20.2)"
+ordering="NONE"
+side="BOTH"

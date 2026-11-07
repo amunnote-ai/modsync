@@ -1,0 +1,36 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+def modProps = new Properties()
+file('../../mod.properties').withInputStream { modProps.load(it) }
+version = modProps.mod_version
+group = 'local.modsync'
+base { archivesName = "modsync-neoforge-${minecraft_version}" }
+java.toolchain.languageVersion = JavaLanguageVersion.of(java_version as int)
+
+// Code shared by every version, plus the NeoForge entry point; this folder only adds what differs in this version
+sourceSets.main.java { srcDir '../../shared/src/main/java'; srcDir '../../shared/src/guigraphics/java'; srcDir '../../loader/neoforge/java' }
+sourceSets.main.resources { srcDir '../../shared/src/main/resources' }
+
+neoForge {
+    version = neo_version
+    runs {
+        client { client() }
+        server { server(); programArgument '--nogui' }
+    }
+    mods { modsync { sourceSet(sourceSets.main) } }
+}
+
+var generateModMetadata = tasks.register('generateModMetadata', ProcessResources) {
+    // Any NeoForge build for this Minecraft version, e.g. 21.4.161 -> [21.4,)
+    var props = [mod_version: project.version, minecraft_version: minecraft_version, neo_min: neo_version.tokenize('.')[0..1].join('.')]
+    inputs.properties props
+    expand props
+    from 'src/main/templates'
+    into 'build/generated/sources/modMetadata'
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

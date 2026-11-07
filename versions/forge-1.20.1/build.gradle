@@ -1,0 +1,67 @@
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '6.0.54'
+}
+def modProps = new Properties()
+file('../../mod.properties').withInputStream { modProps.load(it) }
+version = modProps.mod_version
+group = 'local.modsync'
+base { archivesName = 'modsync-forge-1.20.1' }
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+// Code shared by every version, plus the Forge entry point; this folder only adds what differs in 1.20.1
+sourceSets.main.java { srcDir '../../shared/src/main/java'; srcDir '../../shared/src/guigraphics/java'; srcDir '../../loader/forge/java' }
+sourceSets.main.resources { srcDir '../../shared/src/main/resources' }
+
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            args '--mixin.config', 'modsync.mixins.json'
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${project.buildDir}/createSrgToMcp/output.srg"
+            mods { modsync { source sourceSets.main } }
+        }
+        client { workingDirectory project.file('run-client') }
+        server { workingDirectory project.file('run-server'); args '--nogui' }
+    }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    annotationProcessor 'org.spongepowered:mixin:0.8.5'
+    annotationProcessor 'com.google.guava:guava:31.1-jre'
+    annotationProcessor 'com.google.code.gson:gson:2.10'
+    annotationProcessor 'org.ow2.asm:asm-tree:9.8'
+    annotationProcessor 'org.ow2.asm:asm-commons:9.8'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+// Mixin refmap: map official names to SRG so the mixin works in production
+tasks.register('createMixinSrg') {
+    dependsOn 'createMcpToSrg'
+    doLast {
+        net.minecraftforge.srgutils.IMappingFile.load(file("${project.buildDir}/createMcpToSrg/output.tsrg"))
+            .write(file("${project.buildDir}/mixin-mcp-to-srg.srg").toPath(), net.minecraftforge.srgutils.IMappingFile.Format.SRG, false)
+    }
+}
+tasks.named('compileJava', JavaCompile).configure {
+    dependsOn 'createMixinSrg'
+    options.compilerArgs += [
+        "-AreobfSrgFile=${project.buildDir}/mixin-mcp-to-srg.srg",
+        "-AoutRefMapFile=${project.buildDir}/classes/java/main/modsync.refmap.json",
+        '-AdefaultObfuscationEnv=searge'
+    ]
+}
+
+tasks.named('processResources').configure {
+    inputs.property 'mod_version', project.version
+    filesMatching('META-INF/mods.toml') { expand mod_version: project.version }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest { attributes 'MixinConfigs': 'modsync.mixins.json', 'Implementation-Version': project.version }
+    finalizedBy 'reobfJar'
+}

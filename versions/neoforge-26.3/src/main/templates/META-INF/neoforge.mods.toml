@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="modsync"
+version="${mod_version}"
+displayName="ModSync"
+description='''
+进入服务器前自动比对服务端 mod：下载缺少的、移走版本错误或被禁止的，退出游戏后自动应用。
+Syncs client mods with the server before joining.
+'''
+
+[[mixins]]
+config="modsync.mixins.json"
+
+[[dependencies.modsync]]
+modId="neoforge"
+type="required"
+versionRange="[${neo_min},)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.modsync]]
+modId="minecraft"
+type="required"
+versionRange="[${minecraft_version}]"
+ordering="NONE"
+side="BOTH"
